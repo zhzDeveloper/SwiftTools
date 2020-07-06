@@ -13,7 +13,7 @@ public enum ANSIColors: String {
     case white = "\u{001B}[0;37m"   // unimportant
     case `default` = "\u{001B}[0;0m"
     
-    func name() -> String {
+    public func name() -> String {
         switch self {
         case .black: return "Black"
         case .red: return "Red"
@@ -27,11 +27,11 @@ public enum ANSIColors: String {
         }
     }
     
-    static func all() -> [ANSIColors] {
+    public static func all() -> [ANSIColors] {
         return [.black, .red, .green, .yellow, .blue, .magenta, .cyan, .white, .default]
     }
     
-    static func + (_ left: ANSIColors, _ right: String) -> String {
+    public static func + (_ left: ANSIColors, _ right: String) -> String {
         return left.rawValue + right
     }
 }
