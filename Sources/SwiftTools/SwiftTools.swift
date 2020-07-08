@@ -83,3 +83,50 @@ public func shell(shellPath: String, arguments: [String]? = nil) -> (Int, String
 #endif
 }
 
+/*
+ * 发送钉钉功能: https://ding-doc.dingtalk.com/doc#/serverapi2/qf2nxq
+ * token: 标识发送到哪个群
+ * content: 发送内容
+ */
+public func sendDingDingMsg(token: String, content: [String:Any]) -> Bool {
+    if token.count == 0 {
+        print("token 不能为空")
+        return false
+    }
+    // dd207283de26beea832e4a936fe31bdf7fdcaa0f87d039d66db70f91b9bf0c47
+    let dingUrl = "https://oapi.dingtalk.com/robot/send?access_token=\(token)"
+   
+    var request = URLRequest.init(url: URL(string: dingUrl)!)
+    request.httpMethod = "POST"
+    request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+    
+    do {
+        let httpBody = try JSONSerialization.data(withJSONObject: content, options: .prettyPrinted)
+        request.httpBody = httpBody
+    } catch {
+        print("content 不能为空")
+        return false
+    }
+    let semaphore = DispatchSemaphore(value: 0)
+    var sendSuccess = false
+    URLSession.shared.dataTask(with: request) { (data, response, error) in
+        guard let resData = data else {
+            semaphore.signal()
+            return
+        }
+        do {
+            let result: [String:Any] = try JSONSerialization.jsonObject(with: resData, options: .allowFragments) as! [String : Any]
+            // result: { "errcode":310000, "errmsg":"keywords not in content" }
+            let success = result["errcode"] as! Int == 0
+            sendSuccess = success
+            if !sendSuccess {
+                print(result["errmsg"] ?? "")
+            }
+        } catch {
+            print("发送失败, 请重试")
+        }
+        semaphore.signal()
+    }.resume()
+    semaphore.wait()
+    return sendSuccess
+}
