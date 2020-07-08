@@ -1,7 +1,8 @@
-public struct SwiftTools {
-    var text = "Hello, World!"
-}
+import Foundation
 
+/*
+ 终端色值显示
+ */
 public enum ANSIColors: String {
     case black = "\u{001B}[0;30m"
     case red = "\u{001B}[0;31m"     // error
@@ -36,5 +37,49 @@ public enum ANSIColors: String {
     }
 }
 
+/*
+ 执行shell命令 并获取结果
+ *  shellPath:  命令行启动路径
+ *  arguments:  命令行参数
+ *  returns:    命令行执行结果，积压在一起返回
 
+ *  使用示例
+    let (res, rev) = CommandRunner.sync(shellPath: "/usr/sbin/system_profiler", arguments: ["SPHardwareDataType"])
+    print(rev)
+    
+    let rev = shell("ls -a")
+ */
+public func shell(_ command: String) -> String {
+    let utf8Command = "export LANG=en_US.UTF-8\n" + command
+    let (_, rev) = shell(shellPath: "/bin/bash", arguments: ["-c", utf8Command])
+    return rev
+}
+
+public func shell(shellPath: String, arguments: [String]? = nil) -> (Int, String) {
+#if os(macOS)
+    let task = Process()
+    let pipe = Pipe()
+    
+    var environment = ProcessInfo.processInfo.environment
+    environment["PATH"] = "/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+    task.environment = environment
+    
+    if arguments != nil {
+        task.arguments = arguments!
+    }
+    
+    task.launchPath = shellPath
+    task.standardOutput = pipe
+    task.launch()
+    
+    let data = pipe.fileHandleForReading.readDataToEndOfFile()
+    let output: String = String(data: data, encoding: String.Encoding.utf8)!
+    
+    task.waitUntilExit()
+    pipe.fileHandleForReading.closeFile()
+    return (Int(task.terminationStatus), output)
+#else
+    return (-1, "当前设备不支持")
+#endif
+}
 
